@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>To-Do App | Skill Craft Technology</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+      color: #333;
+    }
+
+    .dark {
+      background-color: #121212;
+      color: #eee;
+    }
+
+    .app {
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .dark .app {
+      background: #1e1e1e;
+      box-shadow: 0 4px 10px rgba(255, 255, 255, 0.1);
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .task-form {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .task-form input[type="text"],
+    .task-form input[type="datetime-local"] {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .task-form button {
+      padding: 10px 15px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .filters {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .filters button {
+      padding: 5px 10px;
+      border: none;
+      background: #ddd;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .filters button:hover {
+      background: #ccc;
+    }
+
+    ul#taskList {
+      list-style: none;
+      padding: 0;
+      margin-top: 20px;
+    }
+
+    li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f9f9f9;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+    }
+
+    .dark li {
+      background: #2a2a2a;
+    }
+
+    .completed .task-content div {
+      text-decoration: line-through;
+      color: gray;
+    }
+
+    .task-content {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .date-badge {
+      font-size: 0.8em;
+      color: #777;
+    }
+
+    .actions button {
+      margin-left: 5px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>📝 To-Do Planner</h1>
+      <button id="toggleMode">🌙</button>
+    </header>
+
+    <div class="task-form">
+      <input type="text" id="taskInput" placeholder="Enter a task..." />
+      <input type="datetime-local" id="taskDate" />
+      <button onclick="addTask()">Add</button>
+    </div>
+
+    <div class="filters">
+      <button onclick="filterTasks('all')">All</button>
+      <button onclick="filterTasks('active')">Active</button>
+      <button onclick="filterTasks('completed')">Completed</button>
+    </div>
+
+    <ul id="taskList"></ul>
+  </div>
+
+  <script>
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+    function saveTasks() {
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
+    function renderTasks(filter = "all") {
+      const taskList = document.getElementById("taskList");
+      taskList.innerHTML = "";
+
+      tasks
+        .filter(task => {
+          if (filter === "all") return true;
+          if (filter === "active") return !task.completed;
+          if (filter === "completed") return task.completed;
+        })
+        .forEach((task, index) => {
+          const li = document.createElement("li");
+          li.className = task.completed ? "completed" : "";
+
+          const content = document.createElement("div");
+          content.className = "task-content";
+          const taskText = document.createElement("div");
+          taskText.contentEditable = true;
+          taskText.innerText = task.text;
+          taskText.oninput = () => editTask(index, taskText.innerText);
+          content.appendChild(taskText);
+
+          if (task.date) {
+            const dateBadge = document.createElement("span");
+            dateBadge.className = "date-badge";
+            dateBadge.innerText = task.date;
+            content.appendChild(dateBadge);
+          }
+
+          const actions = document.createElement("div");
+          actions.className = "actions";
+
+          const completeBtn = document.createElement("button");
+          completeBtn.innerHTML = "✔";
+          completeBtn.onclick = () => toggleComplete(index);
+
+          const deleteBtn = document.createElement("button");
+          deleteBtn.innerHTML = "🗑";
+          deleteBtn.onclick = () => deleteTask(index);
+
+          actions.appendChild(completeBtn);
+          actions.appendChild(deleteBtn);
+
+          li.appendChild(content);
+          li.appendChild(actions);
+          taskList.appendChild(li);
+        });
+    }
+
+    function addTask() {
+      const input = document.getElementById("taskInput");
+      const date = document.getElementById("taskDate").value;
+      const text = input.value.trim();
+
+      if (text === "") return alert("Enter a task!");
+
+      tasks.push({ text, date, completed: false });
+      saveTasks();
+      renderTasks();
+
+      input.value = "";
+      document.getElementById("taskDate").value = "";
+    }
+
+    function editTask(index, newText) {
+      tasks[index].text = newText;
+      saveTasks();
+    }
+
+    function toggleComplete(index) {
+      tasks[index].completed = !tasks[index].completed;
+      saveTasks();
+      renderTasks();
+    }
+
+    function deleteTask(index) {
+      tasks.splice(index, 1);
+      saveTasks();
+      renderTasks();
+    }
+
+    function filterTasks(type) {
+      renderTasks(type);
+    }
+
+    document.getElementById("toggleMode").onclick = () => {
+      document.body.classList.toggle("dark");
+    };
+
+    renderTasks();
+  </script>
+</body>
+</html>
